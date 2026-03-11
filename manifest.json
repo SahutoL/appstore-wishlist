@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "App Store Wishlist",
+  "version": "1.0.2",
+  "description": "Web 版 App Store のアプリを Chrome 拡張機能内のウィッシュリストへ保存・管理します。",
+  "icons": {
+    "16": "public/icons/icon16.png",
+    "32": "public/icons/icon32.png",
+    "48": "public/icons/icon48.png",
+    "128": "public/icons/icon128.png"
+  },
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://apps.apple.com/*"
+  ],
+  "background": {
+    "service_worker": "dist/background/index.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "ウィッシュリスト",
+    "default_popup": "dist/popup/popup.html"
+  },
+  "options_page": "dist/options/options.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://apps.apple.com/*"
+      ],
+      "js": [
+        "dist/content/index.js"
+      ],
+      "css": [
+        "dist/content/content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

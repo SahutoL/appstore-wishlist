@@ -1,0 +1,11 @@
+{
+  "name": "appstore-wishlist",
+  "version": "1.0.2",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "clean": "node scripts/build.mjs --clean",
+    "test": "npm run build && node --test tests/*.test.mjs"
+  }
+}

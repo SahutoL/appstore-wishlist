@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>App Store Wishlist 設定</title>
+    <link rel="stylesheet" href="./options.css">
+  </head>
+  <body class="asw-options-body">
+    <main class="asw-options">
+      <header class="asw-options__hero">
+        <div>
+          <p class="asw-options__eyebrow">App Store Wishlist</p>
+          <h1 class="asw-options__title">設定</h1>
+          <p class="asw-options__lead">保存、表示、データ管理をこの画面でまとめて調整します。</p>
+        </div>
+        <div class="asw-options__status" id="statusMessage" aria-live="polite" role="status"></div>
+      </header>
+
+      <form id="settingsForm" class="asw-options__grid">
+        <section class="asw-panel">
+          <h2 class="asw-panel__title">基本設定</h2>
+          <label class="asw-toggle"><input type="checkbox" name="highlightSavedState"> 保存済み表示を強調する</label>
+          <label class="asw-toggle"><input type="checkbox" name="enableToast"> トースト表示を有効にする</label>
+          <label class="asw-toggle"><input type="checkbox" name="confirmBeforeDelete"> popup で削除前確認を出す</label>
+          <label class="asw-toggle"><input type="checkbox" name="allowRemoveFromPageButton"> ページ上ボタンから削除を許可する</label>
+          <label class="asw-toggle"><input type="checkbox" name="enableAutoRescan"> 自動再解析を有効にする</label>
+        </section>
+
+        <section class="asw-panel">
+          <h2 class="asw-panel__title">表示設定</h2>
+          <label class="asw-field">
+            <span>既定ソート</span>
+            <select name="defaultSort" class="asw-field__input" id="defaultSortSelect"></select>
+          </label>
+          <label class="asw-field">
+            <span>アイコンサイズ</span>
+            <select name="iconSize" class="asw-field__input" id="iconSizeSelect"></select>
+          </label>
+          <label class="asw-field">
+            <span>日付表示形式</span>
+            <select name="dateDisplayFormat" class="asw-field__input" id="dateDisplayFormatSelect"></select>
+          </label>
+          <label class="asw-toggle"><input type="checkbox" name="showCategory"> カテゴリ表示</label>
+          <label class="asw-toggle"><input type="checkbox" name="showRating"> 評価表示</label>
+          <label class="asw-toggle"><input type="checkbox" name="showPrice"> 価格補助表示</label>
+          <label class="asw-toggle"><input type="checkbox" name="showNoteIndicator"> メモ有無表示</label>
+          <button type="submit" class="asw-button asw-button--primary">設定を保存</button>
+        </section>
+      </form>
+
+      <section class="asw-panel asw-panel--full">
+        <h2 class="asw-panel__title">データ管理</h2>
+        <div class="asw-actions">
+          <button type="button" id="exportButton" class="asw-button">JSON を書き出す</button>
+          <label class="asw-button asw-button--ghost">
+            JSON を読み込む
+            <input type="file" id="importInput" accept=".json,application/json" hidden>
+          </label>
+          <button type="button" id="clearButton" class="asw-button asw-button--danger">全件削除</button>
+        </div>
+        <p class="asw-options__note">読み込み時は JSON 形式を検証し、壊れたレコードはスキップします。</p>
+        <dl class="asw-stats">
+          <div><dt>保存件数</dt><dd id="statsCount">-</dd></div>
+          <div><dt>最終更新</dt><dd id="statsUpdatedAt">-</dd></div>
+          <div><dt>最終書き出し</dt><dd id="statsExportedAt">-</dd></div>
+          <div><dt>最終読み込み</dt><dd id="statsImportedAt">-</dd></div>
+        </dl>
+      </section>
+
+      <section class="asw-options__grid">
+        <section class="asw-panel">
+          <h2 class="asw-panel__title">デバッグ情報</h2>
+          <dl class="asw-debug">
+            <div><dt>schemaVersion</dt><dd id="schemaVersion">-</dd></div>
+            <div><dt>storage</dt><dd id="storageBackend">-</dd></div>
+            <div><dt>storageKey</dt><dd id="storageKey">-</dd></div>
+            <div><dt>host</dt><dd id="hostPattern">-</dd></div>
+          </dl>
+        </section>
+
+        <section class="asw-panel">
+          <h2 class="asw-panel__title">バージョン情報</h2>
+          <dl class="asw-debug">
+            <div><dt>拡張機能</dt><dd id="extensionName">-</dd></div>
+            <div><dt>version</dt><dd id="extensionVersion">-</dd></div>
+          </dl>
+        </section>
+      </section>
+    </main>
+    <script type="module" src="./options.js"></script>
+  </body>
+</html>
