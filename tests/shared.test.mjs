@@ -16,6 +16,10 @@ import {
   isLikelyImportPayload,
   validateWishlistDraft
 } from '../dist/shared/validators.js';
+import {
+  chooseBestArtworkUrl,
+  isUsableArtworkUrl
+} from '../dist/content/parser.js';
 
 test('normalizeAppStoreUrl normalizes host, protocol, query, and hash', () => {
   assert.equal(
@@ -46,6 +50,27 @@ test('repairLikelyBrokenAppleAssetUrl repairs legacy broken apple asset URLs', (
       'https://apps.apple.com/image/thumb/Purple221/v4/icon.png'
     ),
     'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/icon.png'
+  );
+});
+
+test('artwork selection rejects share image and prefers mzstatic icon', () => {
+  assert.equal(
+    isUsableArtworkUrl('https://apps.apple.com//assets/images/share/app-store.png'),
+    false
+  );
+
+  assert.equal(
+    chooseBestArtworkUrl([
+      {
+        url: 'https://apps.apple.com//assets/images/share/app-store.png',
+        source: 'meta'
+      },
+      {
+        url: 'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/icon.png/400x400ia-75.webp',
+        source: 'picture'
+      }
+    ]),
+    'https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/icon.png/400x400ia-75.webp'
   );
 });
 

@@ -36,16 +36,32 @@ const CATEGORY_SELECTORS = [
   'main a[href*="/genre/"]'
 ];
 
-function isUsableArtworkUrl(value: string | null): boolean {
+type ArtworkCandidateSource = 'picture' | 'img' | 'meta' | 'structured';
+
+interface ArtworkCandidate {
+  url: string;
+  score: number;
+  index: number;
+}
+
+export function isUsableArtworkUrl(value: string | null): boolean {
   if (!value) {
     return false;
   }
 
   try {
     const url = new URL(value);
-    const pathname = url.pathname.toLocaleLowerCase('en-US');
+    const pathname = url.pathname.replace(/^\/+/u, '/').toLocaleLowerCase('en-US');
 
     if (pathname.startsWith('/assets/')) {
+      return false;
+    }
+
+    if (pathname.includes('/assets/images/share/')) {
+      return false;
+    }
+
+    if (pathname.endsWith('/app-store.png')) {
       return false;
     }
 
@@ -61,6 +77,87 @@ function isUsableArtworkUrl(value: string | null): boolean {
   } catch {
     return false;
   }
+}
+
+export function scoreArtworkUrl(
+  value: string | null,
+  source: ArtworkCandidateSource
+): number {
+  if (!isUsableArtworkUrl(value)) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  const url = new URL(value as string);
+  const hostname = url.hostname.toLocaleLowerCase('en-US');
+  const pathname = url.pathname.toLocaleLowerCase('en-US');
+  let score = 0;
+
+  if (hostname.endsWith('mzstatic.com')) {
+    score += 60;
+  }
+
+  if (pathname.includes('/image/thumb/')) {
+    score += 30;
+  }
+
+  if (pathname.includes('/image/upload/') || pathname.includes('/image/product/')) {
+    score += 18;
+  }
+
+  if (/(appicon|icon[-_]|marketing|software|artwork)/iu.test(pathname)) {
+    score += 18;
+  }
+
+  const sizeMatch = pathname.match(/\/(\d{2,4})x(\d{2,4})/u);
+  if (sizeMatch) {
+    score += Math.min(Number.parseInt(sizeMatch[1], 10), 512) / 16;
+  }
+
+  if (source === 'picture') {
+    score += 12;
+  } else if (source === 'img') {
+    score += 8;
+  } else if (source === 'meta') {
+    score += 4;
+  } else {
+    score += 2;
+  }
+
+  if (hostname === 'apps.apple.com') {
+    score -= 20;
+  }
+
+  return score;
+}
+
+export function chooseBestArtworkUrl(
+  candidates: Array<{ url: string | null; source: ArtworkCandidateSource }>
+): string | null {
+  const ranked = candidates
+    .map<ArtworkCandidate | null>((candidate, index) => {
+      const normalizedUrl = normalizeUrl(candidate.url);
+      const score = scoreArtworkUrl(normalizedUrl, candidate.source);
+
+      if (!Number.isFinite(score) || !normalizedUrl) {
+        return null;
+      }
+
+      return {
+        url: normalizedUrl,
+        score,
+        index
+      };
+    })
+    .filter((candidate): candidate is ArtworkCandidate => candidate !== null)
+    .sort((left, right) => {
+      if (right.score !== left.score) {
+        return right.score - left.score;
+      }
+
+      return left.index - right.index;
+    });
+
+  return ranked[0]?.url ?? null;
 }
 
 function queryFirstElement<T extends Element>(
@@ -254,58 +351,58 @@ function getDeveloper(
 }
 
 function extractImageCandidates(root: ParentNode): string[] {
-  const candidates: string[] = [];
+  const candidates: Array<{ url: string | null; source: ArtworkCandidateSource }> = [];
 
   const pictureSources = root.querySelectorAll<HTMLSourceElement>('picture source[srcset]');
   for (const source of pictureSources) {
-    const candidate = pickBestSrcsetUrl(source.srcset);
-    if (isUsableArtworkUrl(candidate)) {
-      candidates.push(candidate);
-    }
+    candidates.push({
+      url: pickBestSrcsetUrl(source.srcset),
+      source: 'picture'
+    });
   }
 
   for (const selector of ICON_SELECTORS) {
     const elements = root.querySelectorAll<HTMLImageElement>(selector);
     for (const element of elements) {
-      const candidate = normalizeUrl(element.currentSrc || element.src);
-      if (isUsableArtworkUrl(candidate)) {
-        candidates.push(candidate);
-      }
+      candidates.push({
+        url: normalizeUrl(element.currentSrc || element.src),
+        source: 'img'
+      });
     }
   }
 
-  return candidates;
+  const best = chooseBestArtworkUrl(candidates);
+  return best ? [best] : [];
 }
 
 function getIconUrl(
   softwareObject: Record<string, unknown> | null,
   headerRoot: ParentNode
 ): string | null {
-  const domIcon = extractImageCandidates(headerRoot)[0];
-  if (domIcon) {
-    return domIcon;
-  }
-
+  const domIcon = extractImageCandidates(headerRoot)[0] ?? null;
   const ogImage = normalizeUrl(getMetaContent('og:image', 'property'));
-  if (isUsableArtworkUrl(ogImage)) {
-    return ogImage;
-  }
 
-  const image = softwareObject?.image;
-  if (typeof image === 'string') {
-    const normalized = normalizeUrl(image);
-    return isUsableArtworkUrl(normalized) ? normalized : null;
-  }
+  const structuredImages = Array.isArray(softwareObject?.image)
+    ? softwareObject.image
+        .filter((item): item is string => typeof item === 'string')
+        .map((item) => ({
+          url: normalizeUrl(item),
+          source: 'structured' as const
+        }))
+    : typeof softwareObject?.image === 'string'
+      ? [
+          {
+            url: normalizeUrl(softwareObject.image),
+            source: 'structured' as const
+          }
+        ]
+      : [];
 
-  if (Array.isArray(image)) {
-    const firstImage = image.find((item) => typeof item === 'string');
-    const normalized = normalizeUrl(
-      typeof firstImage === 'string' ? firstImage : null
-    );
-    return isUsableArtworkUrl(normalized) ? normalized : null;
-  }
-
-  return null;
+  return chooseBestArtworkUrl([
+    { url: domIcon, source: 'img' },
+    { url: ogImage, source: 'meta' },
+    ...structuredImages
+  ]);
 }
 
 function getScreenshotUrl(
